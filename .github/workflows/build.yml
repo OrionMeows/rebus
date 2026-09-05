@@ -38,8 +38,7 @@ jobs:
         run: |
           msbuild .\Rubeus.sln `
             /p:Configuration=Release `
-            /p:Platform="AnyCPU" `
-            /p:TargetFrameworkRootPath="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework"
+            /p:Platform="Any CPU"
 
       - name: Verify EXE
         shell: pwsh
