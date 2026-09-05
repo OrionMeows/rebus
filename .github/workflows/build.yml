@@ -1,4 +1,4 @@
-name: Build
+name: Build Rubeus
 
 on:
   workflow_dispatch:
@@ -8,16 +8,56 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Force .NET Framework 4.8
+        shell: pwsh
+        run: |
+          $csproj = ".\Rubeus\Rubeus.csproj"
+
+          if (-not (Test-Path $csproj)) {
+            throw "Rubeus.csproj not found at $csproj"
+          }
+
+          $content = Get-Content $csproj -Raw
+          $content = $content -replace '<TargetFrameworkVersion>v4\.0</TargetFrameworkVersion>', '<TargetFrameworkVersion>v4.8</TargetFrameworkVersion>'
+          Set-Content $csproj $content
+
+      - name: Verify target framework
+        shell: pwsh
+        run: |
+          Write-Host "Target framework:"
+          Select-String -Path ".\Rubeus\Rubeus.csproj" -Pattern "<TargetFrameworkVersion>"
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
       - name: Build Rubeus
-        run: msbuild Rubeus.sln /p:Configuration=Release /p:Platform="Any CPU"
+        shell: pwsh
+        run: |
+          msbuild .\Rubeus.sln `
+            /p:Configuration=Release `
+            /p:Platform="AnyCPU" `
+            /p:TargetFrameworkRootPath="C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework"
 
-      - name: Upload executable
+      - name: Verify EXE
+        shell: pwsh
+        run: |
+          $exe = ".\Rubeus\bin\Release\Rubeus.exe"
+
+          if (-not (Test-Path $exe)) {
+            Write-Host "Build output:"
+            Get-ChildItem ".\Rubeus\bin" -Recurse -ErrorAction SilentlyContinue
+            throw "Rubeus.exe was not produced"
+          }
+
+          Write-Host "Built successfully:"
+          Get-Item $exe
+
+      - name: Upload Rubeus.exe
         uses: actions/upload-artifact@v4
         with:
           name: Rubeus
-          path: Rubeus/bin/Release/Rubeus.exe
+          path: .\Rubeus\bin\Release\Rubeus.exe
+          if-no-files-found: error
